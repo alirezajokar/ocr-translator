@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  syntax-check:
+    # This only lints JS syntax — it does not launch the app. The app needs a live GNOME
+    # Wayland session (D-Bus, gsettings, xdg-desktop-portal) to actually run, which a CI
+    # runner doesn't have. See AGENTS.md for how to manually verify a change instead.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check JS syntax
+        run: |
+          find . -path ./node_modules -prune -o -name '*.js' -print \
+            | xargs -n1 node --check

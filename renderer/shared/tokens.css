@@ -1,0 +1,64 @@
+/*
+ * Shared design tokens for OCR Translator's two windows (popup + settings).
+ * Plain CSS custom properties only — no preprocessor, no build step. Linked as a
+ * second <link rel="stylesheet"> ahead of each window's own stylesheet so both stay
+ * visually consistent without duplicating the palette in two places.
+ */
+
+:root {
+  /* -- surfaces -- */
+  --bg: #15151d;           /* window background — keep in sync with main.js BrowserWindow backgroundColor */
+  --surface: #1b1b27;      /* cards / panels */
+  --surface-2: #232332;    /* raised surface: inputs, chips, hovered rows */
+  --surface-3: #2a2a3a;    /* hover state of surface-2 */
+
+  /* -- borders -- */
+  --border: #2c2c3d;
+  --border-strong: #3a3a50;
+  --border-focus: #8a93ff;
+
+  /* -- text -- */
+  --text-primary: #eef0fb;
+  --text-secondary: #a7a7c6;
+  --text-tertiary: #75758f;
+
+  /* -- accent (indigo -> violet gradient) -- */
+  --accent-1: #7c8cff;
+  --accent-2: #a276ff;
+  --accent-strong: #97a4ff;
+  --accent-ink: #131226;
+  --accent-soft-bg: rgba(124, 140, 255, 0.12);
+  --accent-soft-border: rgba(124, 140, 255, 0.35);
+
+  /* -- semantic -- */
+  --success: #3ddc9a;
+  --success-ink: #0e2a1e;
+  --success-bg: rgba(61, 220, 154, 0.12);
+  --success-border: rgba(61, 220, 154, 0.3);
+
+  --error: #ff8585;
+  --error-bg: rgba(255, 90, 90, 0.1);
+  --error-border: rgba(255, 90, 90, 0.28);
+
+  --warning: #e6b566;
+  --warning-bg: rgba(230, 181, 102, 0.1);
+  --warning-border: rgba(230, 181, 102, 0.28);
+
+  /* -- elevation -- */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 8px 24px -6px rgba(0, 0, 0, 0.5);
+  --shadow-focus: 0 0 0 3px var(--accent-soft-bg);
+
+  /* -- shape -- */
+  --radius-sm: 6px;
+  --radius-md: 9px;
+  --radius-lg: 13px;
+
+  /* -- motion -- */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-normal: 200ms;
+
+  /* -- type -- */
+  --font: -apple-system, "Segoe UI", Ubuntu, Cantarell, sans-serif;
+}

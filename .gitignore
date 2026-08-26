@@ -1,0 +1,11 @@
+node_modules/
+*.log
+npm-debug.log*
+dist/
+out/
+.DS_Store
+
+# per-user local settings (holds a plaintext API key) — never commit
+# (this mirrors app.getPath('userData'), which is OUTSIDE this repo on a real machine;
+# listed here defensively in case anyone ever points userData at the project dir)
+settings.json
