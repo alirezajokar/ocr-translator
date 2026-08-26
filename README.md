@@ -89,8 +89,32 @@ The global shortcut for Capture & Translate works independently of the tray eith
 | Cached OCR language data | `~/.config/ocr-translator/tessdata-cache/` |
 | Captured screenshots | `~/Pictures/Screenshots/` (GNOME's own screenshot location) |
 
+## Installing a packaged build
+
+Prebuilt `.deb` and `AppImage` packages are published automatically to
+[GitHub Releases](https://github.com/alirezajokar/ocr-translator/releases) whenever a
+version tag is pushed (see `.github/workflows/release.yml`) — download the latest one
+there instead of building from source if you just want to run the app.
+
+```bash
+sudo dpkg -i ocr-translator_*.deb   # installs to /opt, sets up the app menu entry
+# or, for the portable AppImage:
+chmod +x "OCR Translator-*.AppImage" && ./"OCR Translator-*.AppImage"
+```
+
+The `.deb` package's installer handles the sandbox permission fix itself (it only needs
+the `sudo chown`/`chmod` dance described above when running unpackaged from source).
+
+## Building the packages yourself
+
+```bash
+npm run dist   # produces dist/*.AppImage and dist/*.deb via electron-builder
+```
+
+Release artifacts on GitHub are built by CI from a pushed tag, not uploaded from a local
+build — running `npm run dist` yourself is for local testing only.
+
 ## Status
 
-Local/personal-use build, not yet packaged for distribution (no installer, no
-auto-update). See [AGENTS.md](AGENTS.md) for architecture notes and known quirks if you're
-picking this project back up (with or without AI assistance).
+Personal project, MIT licensed. See [AGENTS.md](AGENTS.md) for architecture notes and
+known quirks if you're picking this project back up (with or without AI assistance).

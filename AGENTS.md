@@ -21,6 +21,8 @@ of these to "fix" something; solve it in plain JS/CSS.
 ```bash
 npm install
 npm start          # foreground, for interactive testing — see the sandbox gotcha below
+npm run dist       # builds dist/*.AppImage and dist/*.deb via electron-builder (local testing only —
+                    # real release artifacts come from .github/workflows/release.yml on a pushed tag)
 ```
 
 **chrome-sandbox gotcha (will bite you immediately after `npm install`)**: Electron's Linux
@@ -114,6 +116,23 @@ if you add a new action.
   original design (auto-translate after OCR). OCR result shows immediately; a "Translate"
   button in the popup calls the separate `translate:start` IPC handler. Don't reintroduce
   automatic translation after OCR without being asked.
+- **Packaging-safe self-invocation and asset paths**: the GNOME shortcut command and the
+  login-autostart `.desktop` entry are NOT hardcoded to `bin/trigger.sh`/`bin/daemon.sh` —
+  those two scripts are dev-convenience only now. `main.js`'s `selfInvokeCommand(action)`
+  computes the right relaunch command from `process.execPath` (+ `app.getAppPath()` only
+  when unpackaged), so the same code works whether running from source or from an
+  installed `.deb`/AppImage. Similarly, `assetPath(...)` resolves icon files to a path
+  under `resources/app.asar.unpacked/` when packaged (see `"build.asarUnpack"` in
+  `package.json`) instead of a virtual `app.asar` path — required because GNOME reading
+  the autostart `.desktop` file's `Icon=` has no idea what an asar archive is, unlike
+  Electron's own APIs which are asar-transparent. If you add a new icon reference used by
+  anything outside this process, route it through `assetPath()`, not `__dirname` directly.
+- **electron-builder's `.deb` target already solves the chrome-sandbox permission problem
+  correctly** for real installs — its generated `postinst` script checks for unprivileged
+  user-namespace support (`unshare --user true`) and only falls back to the root-owned
+  `chmod 4755` when the kernel needs it. The manual `chown root:root && chmod 4755` dance
+  described above is a *source/dev-mode-only* workaround; don't "fix" the packaged build
+  by copying that logic in — it's unnecessary there and already handled.
 
 ## Code style
 

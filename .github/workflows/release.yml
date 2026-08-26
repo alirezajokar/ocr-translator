@@ -1,0 +1,30 @@
+name: Release
+
+# Builds the Linux packages (AppImage + .deb) and publishes them to a GitHub Release —
+# triggered by pushing a version tag (v0.1.0, v0.2.0, ...). Release artifacts should only
+# ever come from here, never uploaded by hand from a local build.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build and publish Linux packages
+        run: npm run dist -- --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

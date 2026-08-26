@@ -5,7 +5,8 @@
   "private": true,
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "dist": "electron-builder --linux AppImage deb"
   },
   "keywords": [
     "electron",
@@ -15,7 +16,10 @@
     "gnome",
     "linux"
   ],
-  "author": "alireza",
+  "author": {
+    "name": "alireza",
+    "email": "alirezajokar1@gmail.com"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -26,10 +30,32 @@
     "url": "https://github.com/alirezajokar/ocr-translator/issues"
   },
   "devDependencies": {
-    "electron": "^32.0.0"
+    "electron": "^32.0.0",
+    "electron-builder": "^26.15.3"
   },
   "dependencies": {
     "dbus-next": "^0.10.2",
     "tesseract.js": "^7.0.0"
+  },
+  "build": {
+    "appId": "dev.alireza.ocrtranslator",
+    "productName": "OCR Translator",
+    "directories": {
+      "output": "dist"
+    },
+    "asarUnpack": [
+      "assets/**/*"
+    ],
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Utility",
+      "icon": "assets/app-icon.png"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "alirezajokar",
+      "repo": "ocr-translator",
+      "releaseType": "release"
+    }
   }
 }

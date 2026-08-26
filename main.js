@@ -15,10 +15,37 @@ const {
 const settingsStore = require('./lib/settingsStore');
 const gnomeScreenshot = require('./lib/gnomeScreenshot');
 const gnomeShortcuts = require('./lib/gnomeShortcuts');
+const autostart = require('./lib/autostart');
 const ocr = require('./lib/ocr');
 const translate = require('./lib/translate');
 
-const TRIGGER_SCRIPT_PATH = path.join(__dirname, 'bin', 'trigger.sh');
+// Builds a shell command that re-launches THIS exact app (optionally with an action flag),
+// working identically whether we're running unpackaged from source (`electron .` — needs
+// the app directory as an explicit argument) or from an installed package (`process.
+// execPath` alone IS the app; electron-builder bakes the app path into the binary). This
+// is what both the GNOME keyboard shortcut and the login-autostart entry actually invoke —
+// computed fresh at every startup rather than hardcoded, so packaging/moving/upgrading the
+// app doesn't leave either of them pointing at a stale path.
+function selfInvokeCommand(action) {
+  const parts = [process.execPath];
+  if (!app.isPackaged) parts.push(app.getAppPath());
+  if (action) parts.push(`--${action}`);
+  return parts.map((p) => `'${p.replace(/'/g, `'\\''`)}'`).join(' ');
+}
+
+// Resolves a path under assets/ that's guaranteed to be a REAL file on disk, not a virtual
+// path inside app.asar — needed for anything read by a process other than this one (the
+// autostart .desktop file's Icon=, in particular; GNOME Shell has no idea what an asar
+// archive is). electron-builder is configured (see package.json's "build.asarUnpack") to
+// keep assets/ unpacked alongside app.asar for exactly this reason. Electron's own APIs
+// (Tray, BrowserWindow icon) are asar-transparent so this isn't strictly required for
+// those, but using it everywhere keeps every icon reference consistent and packaging-safe.
+function assetPath(...segments) {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'app.asar.unpacked', ...segments);
+  }
+  return path.join(__dirname, ...segments);
+}
 
 // --- single instance: a second launch just signals the already-running daemon ---
 // This is how the GNOME global-shortcut workaround works (see bottom of file): the
@@ -157,7 +184,7 @@ function createSettingsWindow() {
     resizable: true,
     title: 'OCR Translator — Settings',
     backgroundColor: '#15151d',
-    icon: path.join(__dirname, 'assets', 'app-icon.png'),
+    icon: assetPath('assets', 'app-icon.png'),
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -246,7 +273,7 @@ function buildTrayMenu() {
 }
 
 function createTray() {
-  const icon = nativeImage.createFromPath(path.join(__dirname, 'assets', 'tray-icon.png'));
+  const icon = nativeImage.createFromPath(assetPath('assets', 'tray-icon.png'));
   tray = new Tray(icon);
   tray.setToolTip('OCR Translator');
   tray.setContextMenu(buildTrayMenu());
@@ -276,7 +303,7 @@ function registerIpcHandlers() {
       // our own JSON — don't let a failure here (e.g. gsettings missing) block the save
       // the user actually asked for, but do surface it distinctly from a validation error.
       try {
-        await gnomeShortcuts.applyShortcuts(settingsStore.getSettings(), TRIGGER_SCRIPT_PATH);
+        await gnomeShortcuts.applyShortcuts(settingsStore.getSettings(), selfInvokeCommand('capture'));
       } catch (err) {
         console.error('[main] failed to apply shortcuts:', err);
         return { ok: true, shortcutWarning: `Settings saved, but shortcuts could not be applied: ${err.message}` };
@@ -341,8 +368,16 @@ app.whenReady().then(() => {
   // Settings is saved — makes this self-healing after a fresh install/reinstall instead
   // of depending on the user opening Settings once before the shortcuts exist at all.
   gnomeShortcuts
-    .applyShortcuts(settingsStore.getSettings(), TRIGGER_SCRIPT_PATH)
+    .applyShortcuts(settingsStore.getSettings(), selfInvokeCommand('capture'))
     .catch((err) => console.error('[main] failed to apply shortcuts at startup:', err));
+
+  // Same self-healing idea for login autostart: rewrite the .desktop entry every launch so
+  // it always points at wherever this binary currently actually is.
+  try {
+    autostart.ensureAutostartEntry(selfInvokeCommand(null), assetPath('assets', 'app-icon.png'));
+  } catch (err) {
+    console.error('[main] failed to write autostart entry:', err);
+  }
 });
 
 app.on('will-quit', () => {

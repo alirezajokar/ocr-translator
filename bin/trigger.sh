@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-# Invoked by a GNOME custom keyboard shortcut (see README) to activate the OCR
-# Translator background app. Not meant to be run by hand except for testing.
+# Dev convenience only — NOT what the actual GNOME keyboard shortcut invokes anymore.
+# main.js computes and self-registers its own invocation command at every startup (see
+# `selfInvokeCommand()`), so the shortcut works correctly whether running from source or
+# from an installed package without depending on this project-relative script. This is
+# just a handy way to trigger the same actions by hand from a terminal while developing.
 #
 # Usage: trigger.sh <capture|settings|quit>
 #
