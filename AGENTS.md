@@ -57,7 +57,8 @@ lib/
                         captures (re-creating one per capture was the original perf bug —
                         don't regress this). PSM is pinned to SINGLE_BLOCK (see inline
                         comment) — don't revert to AUTO without a reason.
-  translate.js          OpenAI-compatible chat/completions call via native `fetch`.
+  translate.js          OpenAI-compatible chat/completions call via the official `openai`
+                        npm package (not a hand-rolled `fetch` call — see "Known issues").
   settingsStore.js      Plain JSON file under `app.getPath('userData')`. Validates on the
                         main-process side always — never trust renderer input just because
                         it came from our own settings form.
@@ -112,6 +113,14 @@ if you add a new action.
   lost, leaving the UI stuck on its static placeholder. `ensurePopupWindow()` buffers the
   first update until `did-finish-load` fires; keep using `sendUpdate()` (never
   `popupWindow.webContents.send(...)` directly) so that buffering stays in effect.
+- **Use the official `openai` SDK for the translation call, not a hand-rolled `fetch`** —
+  this was a real production bug, not just a style preference: the original hand-rolled
+  client never sent `stream` in the request body, and at least one real OpenAI-compatible
+  provider defaults to streaming (SSE) when it's omitted rather than defaulting to `false`
+  per the OpenAI spec, which broke translation against that provider. `lib/translate.js`
+  now sends `stream: false` explicitly via `client.chat.completions.create(...)`. If you
+  ever touch this file, keep that explicit and don't go back to a manual HTTP client for
+  an OpenAI-compatible API without a real reason.
 - **Translation is on-demand, not automatic** — this was a deliberate change from the
   original design (auto-translate after OCR). OCR result shows immediately; a "Translate"
   button in the popup calls the separate `translate:start` IPC handler. Don't reintroduce
