@@ -99,15 +99,33 @@ if you add a new action.
   call`, which is why this file doesn't just shell out like the rest of the app does).
 - **Global shortcuts cannot use Electron's `globalShortcut` module** — it's X11-only in
   practice and this app targets Wayland/GNOME. Activation goes through a GNOME custom
-  keybinding (`gsettings`) that runs `bin/trigger.sh`, managed by `lib/gnomeShortcuts.js`.
-  If you ever add a second global action, add a new named slot there (`ocrtranslator-*`)
-  rather than reusing `custom0`/`custom1`-style generic slots — those collide with
-  anything else on the system using the same shared `custom-keybindings` list.
+  keybinding (`gsettings`) running the self-invocation command from `selfInvokeCommand()`
+  (see above), managed by `lib/gnomeShortcuts.js`. If you ever add a second global action,
+  add a new named slot there (`ocrtranslator-*`) rather than reusing `custom0`/
+  `custom1`-style generic slots — those collide with anything else on the system using the
+  same shared `custom-keybindings` list.
+- **`gsettings set ... command '<value>'` GVariant-parses a value starting with a quote
+  character** instead of treating it as a literal string — a real bug hit while building
+  this: the self-invocation command is itself a shell command line wrapping each argument
+  in single quotes, and passing that bare made `gsettings` choke trying (and failing) to
+  parse it as GVariant syntax. Fix in `lib/gnomeShortcuts.js`: `JSON.stringify()` the value
+  before passing it — its double-quoted output is close enough to GVariant's own
+  double-quoted string syntax to pass through as one literal.
 - **tesseract.js's Node cache adapter is a bare `fs.writeFile`** — it does not create its
   own directory, and a failed write is caught *inside* tesseract.js and only logged to its
   own internal logger, never thrown back to us. `lib/ocr.js`'s `cacheDir()` explicitly
   `mkdirSync`s before returning the path. Without this, language data silently
   re-downloads from the CDN on every worker creation instead of ever landing on disk.
+- **OCR picks up decorative icons as stray characters** — confirmed with a real capture: a
+  diamond/logo icon next to real text got read as the character `"<"` at confidence 67,
+  while the real text alongside it scored 95-96. A single global confidence threshold can't
+  separate those (67 is a legitimate score for real-but-imperfect text too). `lib/ocr.js`'s
+  `extractConfidentText()` instead applies a *much* stricter confidence ceiling, but only to
+  "words" that are short (≤2 chars) and contain no letter/digit at all — i.e. could
+  plausibly be a misread icon/symbol. Real words always contain a letter/digit, so this
+  can't touch them regardless of their confidence. If false positives/negatives show up
+  with real screenshots, tune `SUSPICIOUS_SYMBOL_CONFIDENCE_CEILING`/`_MAX_LEN` there rather
+  than the global `MIN_WORD_CONFIDENCE` floor.
 - **Popup IPC race**: don't call `sendUpdate()` synchronously right after creating a new
   popup `BrowserWindow` — the renderer hasn't loaded `popup.js` yet and the message is
   lost, leaving the UI stuck on its static placeholder. `ensurePopupWindow()` buffers the
