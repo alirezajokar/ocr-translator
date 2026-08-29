@@ -116,16 +116,25 @@ if you add a new action.
   own internal logger, never thrown back to us. `lib/ocr.js`'s `cacheDir()` explicitly
   `mkdirSync`s before returning the path. Without this, language data silently
   re-downloads from the CDN on every worker creation instead of ever landing on disk.
-- **OCR picks up decorative icons as stray characters** — confirmed with a real capture: a
-  diamond/logo icon next to real text got read as the character `"<"` at confidence 67,
-  while the real text alongside it scored 95-96. A single global confidence threshold can't
-  separate those (67 is a legitimate score for real-but-imperfect text too). `lib/ocr.js`'s
-  `extractConfidentText()` instead applies a *much* stricter confidence ceiling, but only to
-  "words" that are short (≤2 chars) and contain no letter/digit at all — i.e. could
-  plausibly be a misread icon/symbol. Real words always contain a letter/digit, so this
-  can't touch them regardless of their confidence. If false positives/negatives show up
-  with real screenshots, tune `SUSPICIOUS_SYMBOL_CONFIDENCE_CEILING`/`_MAX_LEN` there rather
-  than the global `MIN_WORD_CONFIDENCE` floor.
+- **OCR picks up decorative icons as stray characters** — confirmed with two real captures,
+  misread two different ways: a diamond/logo icon read as the punctuation character `"<"`
+  at confidence 67, and (once "fas" is loaded alongside "eng") a UI icon read as a short
+  Arabic/Persian-script word `"نا"` at confidence 85 — both sitting next to real text
+  scoring 95-96. A single global confidence threshold can't separate either case (both
+  scores are also legitimate scores for real-but-imperfect text). What actually works:
+  `lib/ocr.js`'s `extractConfidentText()` computes the *dominant script* across the whole
+  capture, then applies a stricter confidence ceiling only to short (≤2 char) "words" that
+  are either pure punctuation/symbols, or whose script doesn't match that dominant script.
+  This is why it's dominant-script-relative rather than "assume Latin is normal, flag
+  Arabic": a genuinely Persian/Arabic screenshot has Persian as its OWN dominant script, so
+  short real Persian words (common — many are 1-3 letters) are left alone; it only
+  tightens the bar for a minority-script token that looks out of place given the rest of
+  that specific capture. Real words in the dominant script are never touched by this rule
+  regardless of confidence. The same function also strips zero-width bidi control
+  characters (LRM/RLM etc.) that tesseract's Arabic/Persian output wraps RTL runs in — pure
+  formatting noise, never meaningful content. If false positives/negatives show up with
+  real screenshots, tune `SUSPICIOUS_SHORT_CONFIDENCE_CEILING`/`_MAX_LEN` there rather than
+  the global `MIN_WORD_CONFIDENCE` floor.
 - **Popup IPC race**: don't call `sendUpdate()` synchronously right after creating a new
   popup `BrowserWindow` — the renderer hasn't loaded `popup.js` yet and the message is
   lost, leaving the UI stuck on its static placeholder. `ensurePopupWindow()` buffers the
